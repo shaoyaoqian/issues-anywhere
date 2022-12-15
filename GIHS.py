@@ -2,24 +2,29 @@ import requests
 import base64
 import json
 import hashlib
+from loguru import logger
 
-# 参数设置
-# 我把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
-GIHS_OWNER   = "shaoyaoqian"
-GIHS_REPO    = "alice-player"
-GIHS_PATH    = "test"
-GITHUB_TOKEN = "ghu_C0ME6ze7ucpWPmVicwjaDkURhXQPkg20PFmH"
-url_stensil  = "https://api.github.com/repos/{owner}/{repo}/contents/{path}/{filename}"
-cdn_stensil  = "https://cdn.jsdelivr.net/gh/{owner}/{repo}/{path}/{filename}"
+# 把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
+GIHS_OWNER          = "shaoyaoqian"
+GIHS_REPO           = "alice-player"
+GIHS_PATH           = "test"
+GIHS_url_stensil    = "https://api.github.com/repos/{owner}/{repo}/contents/{path}/{filename}"
+GIHS_cdn_stensil    = "https://cdn.jsdelivr.net/gh/{owner}/{repo}/{path}/{filename}"
+
+# GitHub issues 仓库
+GITHUB_TOKEN = "ghu_RjTyVDgluFzDUEP8NSA7rQnlQRns7k4fXpjV"
+GITHUB_OWNER = 'shaoyaoqian'
+GITHUB_REPO  = "alice-player"
 
 # GitHub App
 APP_ID        = "272667"
 client_id     = "Iv1.d5df482df1cd3635"
 client_secret = "c9a7b1d853d87a138923951ba47e3c8fadd2d26b"
 
+APP_RSA_FILE = "wechat-to-issues.2022-12-14.private-key.pem"
 
-
-def upload_file(filename):
+def GIHS_upload_file(filename):
+    logger.info("GIHS_upload_file")
     # 读取文件
     def open_file(file_path):
         with open(file_path, 'rb') as f:
@@ -41,7 +46,7 @@ def upload_file(filename):
         return hash
     file_data = open_file(filename)
     token = GITHUB_TOKEN
-    url = url_stensil.format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
+    url = GIHS_url_stensil.format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
     headers = {"Authorization": "token " + token}
     content, sha = file_base64(file_data)
     data = {
@@ -54,16 +59,17 @@ def upload_file(filename):
         "content": content
     }
     data = json.dumps(data)
-    req = requests.put(url=url, data=data, headers=headers)
-    req.encoding = "utf-8"
-    re_data = json.loads(req.text)
+    response = requests.put(url=url, data=data, headers=headers)
+    response.encoding = "utf-8"
+    re_data = json.loads(response.text)
     # 能返回文件sha值表示上传成功
     print(re_data)
     print(re_data['content']['sha']) 
     # 在国内默认的down_url可能会无法访问，因此使用CDN访问
-    return cdn_stensil.format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
+    return GIHS_cdn_stensil .format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
 
 def create_github_issue(title,body):
+    logger.info("create_github_issue")
     token = GITHUB_TOKEN
     url_base = "https://api.github.com/repos/{OWNER}/{REPO}/issues"
     url = url_base.format(OWNER=GIHS_OWNER, REPO=GIHS_REPO)
@@ -77,12 +83,14 @@ def create_github_issue(title,body):
         "body": body,
     }
     data = json.dumps(data)
-    req = requests.post(url=url, data=data, headers=headers)
-    message = "成功发布动态！\n日期：{}\n内容：{}\n".format(req.json()['title'],req.json()['body'])
+    response = requests.post(url=url, data=data, headers=headers)
+    message = "成功发布动态！\n日期：{}\n内容：{}\n".format(response.json()['title'],response.json()['body'])
+    logger.info(message)
     return message
 
 
 def user_access_token(code):
+    logger.info("user_access_token")
     url_access_token = "https://github.com/login/oauth/access_token"
     params = {
         "client_id": client_id,
@@ -101,26 +109,24 @@ def user_access_token(code):
 
 def installation_access_token(installation_id):
     # 生成JWT令牌
-    key = open("wechat-to-issues.2022-12-14.private-key.pem",'r').read()
+    logger.info("installation_access_token")
+    key = open(APP_RSA_FILE, 'r').read()
+    url_app          = "https://api.github.com/app"
     url_access_token = 'https://api.github.com/app/installations/{installation_id}/access_tokens'
-    url_app = "https://api.github.com/app"
-    authorization = '"Authorization: Bearer {YOUR_JWT}"'
-
+    authorization    = '"Authorization: Bearer {YOUR_JWT}"'
     payload = {
         'iat': int(time.time())-100,
         'exp': int(time.time())+500,
         'iss': APP_ID
     }
     JWT_token = jwt.encode(payload=payload, key=key, algorithm='RS256')
-    print(JWT_token)
-    headers = {
+    headers   = {
         "Authorization": "Bearer " + JWT_token,
         "Accept": "application/vnd.github+json"
     }
-    # req = requests.post(url_app, headers=headers)
-    req = requests.post(url_access_token.format(installation_id=installation_id), headers=headers)
-    print(req.json())
-    return req
+    response = requests.post(url_access_token.format(installation_id=installation_id), headers=headers)
+    print(response.json())
+    return response
 
 if __name__ == '__main__':
     filename = "a.jpeg"

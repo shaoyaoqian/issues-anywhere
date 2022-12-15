@@ -1,10 +1,9 @@
 # coding:utf-8
 # 使用前提：云主机(其实用免费的vercel也可以)、域名、微信公众号、七牛云账号、GitHub账号
 # 参考 : 
-# python 微信公众号开发[1] 后台服务器端配置与公众号开发配置
+# python 微信公众号开发 后台服务器端配置与公众号开发配置
 # https://blog.csdn.net/jinxiaonian11/article/details/104708996/
 
-# pip3 install flask, xmltodict, octokitpy, qiniu
 from flask import Flask, request, abort, render_template
 import hashlib
 import xmltodict
@@ -13,14 +12,17 @@ import json
 import requests
 import jwt
 from urllib.parse import parse_qs
-# from octokit import Octokit
+from loguru import logger 
 
-# 查看正在运行的python程序
-# ps -aux|grep python
+# GITHUB 模块
+from GIHS import create_github_issue, user_access_token
+from GIHS import GIHS_upload_file as upload_file
+# from QIHS import upload_file
+
+# 异步任务池
 import asyncio, time, threading
-
+#  运行事件循环， loop以参数的形式传递进来运行
 def start_loop(thread_loop):
-     #  运行事件循环， loop以参数的形式传递进来运行
     asyncio.set_event_loop(thread_loop)
     thread_loop.run_forever()
 
@@ -29,43 +31,15 @@ thread_loop = asyncio.new_event_loop()
 # 将次事件循环运行在一个线程中，防止阻塞当前主线程，运行线程，同时协程事件循环也会运行
 threading.Thread(target=start_loop,args=(thread_loop,)).start()
 
-
-
-from GIHS import upload_file, create_github_issue
-# from QIHS import upload_file
-
 # 微信的token令牌，参数的获取可参考：https://qiniu.pengfeima.cn/typora/202212031457547.png
 WECHAT_TOKEN = 'look_back_at_me'
 WECHAT_APPID = "wxcc6a1b8adade3237",         
 WECHAT_SECRET = "29b97cdfd439873420ecf78e8221fdea"
 
-# GitHub
-GITHUB_TOKEN = "ghu_C0ME6ze7ucpWPmVicwjaDkURhXQPkg20PFmH"
-GITHUB_OWNER = 'shaoyaoqian'
-GITHUB_REPO  = "MerryJingle"
-
+# 创建一个 Flask 应用
 app = Flask(__name__)
 
-# 获取微信的access token，在获取音频和视频文件时用得到
-# 注意：虽然官方文档有向用户发送视频文件的方法，但本人多次尝试无法成功。有人询问过微信官方，但是微信官方不置可否。
-def get_access_token():
-    baseurl = "https://api.weixin.qq.com/cgi-bin/token?"
-    params = {
-        "grant_type":"client_credential",
-        "appid": WECHAT_APPID,         
-        "secret": WECHAT_SECRET
-    }
-    r = requests.get(baseurl, params=params)
-    print(r)
-    access_token = r.json()["access_token"]
-    try:
-        r = requests.get(baseurl, params=params)
-    except Exception as e:
-        print(e)
-    return access_token
-# http://wechat.pengfeima.cn/github-auth/?code=34d7fb3761626926881a
-
-# 用户点击下面这个链接登陆，然后会跳转到这里。这个程序获取code，然后向 GitHub 申请 access token。
+# 用户点击下面这个链接登陆，然后会跳转到这里，获取code，然后向 GitHub 申请 access token。
 # url = "https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635"
 @app.route("/github-auth/", methods=["GET", "POST"])
 def github():
@@ -85,7 +59,8 @@ def github():
     &ensp;&ensp;2bb40dc6c:{identity}<br>
     若失效，请点击：https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
     """
-    return message.format(identity=identity)
+    print(access_token)
+    return message.format(identity=identity[0:4])
 
 @app.route("/", methods=["GET", "POST"])
 def wechat():
@@ -144,159 +119,156 @@ def wechat():
             # 将xml字符串解析成字典
             xml_dict = xmltodict.parse(xml_str)
             xml_dict = xml_dict.get("xml")
+            return wechat_message(xml_dict)
 
-            # MsgType是消息类型 这里提取消息类型
-            msg_type = xml_dict.get("MsgType")
+def wechat_message_image(xml_dict):
+    # PicUrl  图片链接
+    # MediaId 图片消息的媒体id，图片被归为临时素材，通过统一接口调用。
+    # 
+    # resp_dict = {
+    #     "xml":{
+    #         "ToUserName":xml_dict.get("FromUserName"),
+    #         "FromUserName":xml_dict.get("ToUserName"),
+    #         "CreateTime":int(time.time()),
+    #         "MsgType":"image",
+    #         "Image":{
+    #             "MediaId":xml_dict.get("MediaId")
+    #         }
+    #     }
+    # }
+    #
+    async def async_handle():
+        # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
+        filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
+        r = requests.get(xml_dict.get("PicUrl"))
+        with open(filename, 'wb') as f:
+            f.write(r.content)
+        # 上传
+        picurl = upload_file(filename)
+        # 将图片链接改成markdown中的表达形式
+        body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
+        # 发布issue
+        title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
 
-            if msg_type == "text":
-                # 表示收到文本消息
-                # 构造xml格式的返回值,
-                # 返回值会经由微信服务器回复给用户
-                # 其中：
-                # ToUsername: (必须传) 接收方账号(收到的OpenID)
-                # FromUserName: (必须传) 开发者微信号
-                # CreateTime: (必须传) 消息创建时间(整形)
-                # MsgType: (必须传) 消息类型
-                # Content: (必须传) 回复消息的内容(换行:在Content中能够换行, 微信客户端就支持换行显示)
+    asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
+    # 告知用户issue是否成功发布
+    resp_dict = {
+        "xml":{
+            "ToUserName":xml_dict.get("FromUserName"),
+            "FromUserName":xml_dict.get("ToUserName"),
+            "CreateTime":int(time.time()),
+            "MsgType":"text",
+            "Content":"OK"
+        }
+    }
+    return resp_dict
 
-                # 发布GitHub issue
-                title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-                body = xml_dict.get("Content")
-                message = create_github_issue(title,body)
+def wechat_message_text(xml_dict):
+    # 表示收到文本消息
+    # 构造xml格式的返回值,
+    # 返回值会经由微信服务器回复给用户
+    # 其中：
+    # ToUsername: (必须传) 接收方账号(收到的OpenID)
+    # FromUserName: (必须传) 开发者微信号
+    # CreateTime: (必须传) 消息创建时间(整形)
+    # MsgType: (必须传) 消息类型
+    # Content: (必须传) 回复消息的内容(换行:在Content中能够换行, 微信客户端就支持换行显示)
 
-                # 返回消息告知用户issue是否成功发布
-                resp_dict = {
-                    "xml":{
-                        "ToUserName":xml_dict.get("FromUserName"),
-                        "FromUserName":xml_dict.get("ToUserName"),
-                        "CreateTime":int(time.time()),
-                        "MsgType":"text",
-                        "Content":message
-                    }
-                }
+    # 发布GitHub issue
+    title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
+    body = xml_dict.get("Content")
+    message = create_github_issue(title,body)
 
+    # 返回消息告知用户issue是否成功发布
+    resp_dict = {
+        "xml":{
+            "ToUserName":xml_dict.get("FromUserName"),
+            "FromUserName":xml_dict.get("ToUserName"),
+            "CreateTime":int(time.time()),
+            "MsgType":"text",
+            "Content":message
+        }
+    }
+    return resp_dict
 
+def wechat_message_video(xml_dict):
+    access_token = wechat_access_token()
+    # 下载视频文件
+    baseurl = "https://api.weixin.qq.com/cgi-bin/media/get?"
+    params = {
+        "access_token" : access_token,
+        "media_id" : xml_dict.get("MediaId")
+    }
+    filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".mp4"
+    r = requests.get(baseurl, params=params)
+    with open(filename, 'wb') as f:
+        f.write(r.content)
+    
+    video_url = upload_file(filename)
+    body = "<video src={} width=200 controls></video>".format(video_url)
+    # 发布issue
+    title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
+    message = create_github_issue(title,body)
+    # 告知用户issue是否成功发布
+    resp_dict = {
+        "xml":{
+            "ToUserName":xml_dict.get("FromUserName"),
+            "FromUserName":xml_dict.get("ToUserName"),
+            "CreateTime":int(time.time()),
+            "MsgType":"text",
+            "Content":message
+        }
+    }
+    return resp_dict
 
-            elif msg_type == "image":
-                # PicUrl  图片链接
-                # MediaId 图片消息的媒体id，图片被归为临时素材，通过统一接口调用。
-                # 
-                # resp_dict = {
-                #     "xml":{
-                #         "ToUserName":xml_dict.get("FromUserName"),
-                #         "FromUserName":xml_dict.get("ToUserName"),
-                #         "CreateTime":int(time.time()),
-                #         "MsgType":"image",
-                #         "Image":{
-                #             "MediaId":xml_dict.get("MediaId")
-                #         }
-                #     }
-                # }
-                #
-                async def async_handle():
-                    # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
-                    filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
-                    r = requests.get(xml_dict.get("PicUrl"))
-                    with open(filename, 'wb') as f:
-                        f.write(r.content)
-                    # 上传
-                    picurl = upload_file(filename)
-                    # 将图片链接改成markdown中的表达形式
-                    body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
-                    # 发布issue
-                    title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-                    message = create_github_issue(title,body)
+def wechat_message(xml_dict):
+    # MsgType是消息类型 这里提取消息类型
+    msg_type = xml_dict.get("MsgType")
 
-                    access_token = get_access_token()
-                    print("access_token: ", access_token)
+    if msg_type == "text":
+        resp_dict = wechat_message_text(xml_dict)
 
-                    add_kefu_url = 'https://api.weixin.qq.com/customservice/kfaccount/add'
+    elif msg_type == "image":
+        resp_dict = wechat_message_image(xml_dict)
 
-                    params = {
-                        "access_token": access_token,
-                        "json": {
-                            "kf_account" : "system2@system",
-                            "nickname" : "客服2",
-                            "password" : "admin2",
-                            }
-                    }
-                    r = requests.post(add_kefu_url, params=params)
-                    print(r.json())
-                    # $data = '{
-                    #     "kf_account" : "system@system",
-                    #     "nickname" : "客服1",
-                    #     "password" : "admin",
-                    # }';
-                    # json_data = {
-                    #     "touser":xml_dict.get("FromUserName"),
-                    #     "msgtype":"text",
-                    #     "text":
-                    #     {
-                    #         "content":"Hello World"
-                    #     }
-                    # }
-                    # json=json_data
-                    # requests.post()
+    elif msg_type == "video":
+        resp_dict = wechat_message_video(xml_dict)
+    
+    else:
+        resp_dict = {
+            "xml": {
+                "ToUserName": xml_dict.get("FromUserName"),
+                "FromUserName": xml_dict.get("ToUserName"),
+                "CreateTime": int(time.time()),
+                "MsgType": "text",
+                "Content": "不能处理消息类型：" + msg_type
+            }
+        }
+    # 将字典转换为xml字符串
+    resp_xml_str = xmltodict.unparse(resp_dict)
+    logger.info(resp_dict)
+    logger.info(resp_xml_str)
+    # 返回消息数据给微信服务器
+    return resp_xml_str
 
-                asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
-                # 告知用户issue是否成功发布
-                resp_dict = {
-                    "xml":{
-                        "ToUserName":xml_dict.get("FromUserName"),
-                        "FromUserName":xml_dict.get("ToUserName"),
-                        "CreateTime":int(time.time()),
-                        "MsgType":"text",
-                        "Content":"OK"
-                    }
-                }
+def wechat_access_token():
+    # 获取微信的access token，在获取音频和视频文件时用得到
+    # 注意：虽然官方文档有向用户发送视频文件的方法，但本人多次尝试无法成功。有人询问过微信官方，但是微信官方不置可否。
+    baseurl = "https://api.weixin.qq.com/cgi-bin/token?"
+    params = {
+        "grant_type":"client_credential",
+        "appid": WECHAT_APPID,         
+        "secret": WECHAT_SECRET
+    }
+    r = requests.get(baseurl, params=params)
+    print(r)
+    access_token = r.json()["access_token"]
+    try:
+        r = requests.get(baseurl, params=params)
+    except Exception as e:
+        print(e)
+    return access_token
 
-
-
-            elif msg_type == "video":
-                access_token = get_access_token()
-                # 下载视频文件
-                baseurl = "https://api.weixin.qq.com/cgi-bin/media/get?"
-                params = {
-                    "access_token" : access_token,
-                    "media_id" : xml_dict.get("MediaId")
-                }
-                filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".mp4"
-                r = requests.get(baseurl, params=params)
-                with open(filename, 'wb') as f:
-                    f.write(r.content)
-                
-                video_url = upload_file(filename)
-                # 将图片链接改成markdown中的表达形式
-                body = "<video src={} width=200 controls></video>".format(video_url)
-                # 发布issue
-                title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-                message = create_github_issue(title,body)
-                # 告知用户issue是否成功发布
-                resp_dict = {
-                    "xml":{
-                        "ToUserName":xml_dict.get("FromUserName"),
-                        "FromUserName":xml_dict.get("ToUserName"),
-                        "CreateTime":int(time.time()),
-                        "MsgType":"text",
-                        "Content":message
-                    }
-                }
-            
-            else:
-                resp_dict = {
-                    "xml": {
-                        "ToUserName": xml_dict.get("FromUserName"),
-                        "FromUserName": xml_dict.get("ToUserName"),
-                        "CreateTime": int(time.time()),
-                        "MsgType": "text",
-                        "Content": "我不想回复"
-                    }
-                }
-            # 将字典转换为xml字符串
-            resp_xml_str = xmltodict.unparse(resp_dict)
-            print(resp_xml_str)
-            # 返回消息数据给微信服务器
-            return resp_xml_str
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)

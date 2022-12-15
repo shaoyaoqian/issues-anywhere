@@ -11,10 +11,27 @@ import xmltodict
 import time, datetime
 import json
 import requests
-from octokit import Octokit
+import jwt
+from urllib.parse import parse_qs
+# from octokit import Octokit
+
+# 查看正在运行的python程序
+# ps -aux|grep python
+import asyncio, time, threading
+
+def start_loop(thread_loop):
+     #  运行事件循环， loop以参数的形式传递进来运行
+    asyncio.set_event_loop(thread_loop)
+    thread_loop.run_forever()
+
+# 获取一个事件循环
+thread_loop = asyncio.new_event_loop()
+# 将次事件循环运行在一个线程中，防止阻塞当前主线程，运行线程，同时协程事件循环也会运行
+threading.Thread(target=start_loop,args=(thread_loop,)).start()
 
 
-from GIHS import upload_file
+
+from GIHS import upload_file, create_github_issue
 # from QIHS import upload_file
 
 # 微信的token令牌，参数的获取可参考：https://qiniu.pengfeima.cn/typora/202212031457547.png
@@ -23,7 +40,7 @@ WECHAT_APPID = "wxcc6a1b8adade3237",
 WECHAT_SECRET = "29b97cdfd439873420ecf78e8221fdea"
 
 # GitHub
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "ghu_C0ME6ze7ucpWPmVicwjaDkURhXQPkg20PFmH"
 GITHUB_OWNER = 'shaoyaoqian'
 GITHUB_REPO  = "MerryJingle"
 
@@ -46,13 +63,29 @@ def get_access_token():
     except Exception as e:
         print(e)
     return access_token
+# http://wechat.pengfeima.cn/github-auth/?code=34d7fb3761626926881a
 
-def create_github_issue(title,body):
-    octokit = Octokit(auth='token', token=GITHUB_TOKEN)
-    issue = octokit.issues.create(owner=GITHUB_OWNER,repo=GITHUB_REPO,title=title,body=body)
-    message = "成功发布动态！\n日期：{}\n内容：{}\n".format(issue.response.title,issue.response.body)
-    print(message)
-    return message
+# 用户点击下面这个链接登陆，然后会跳转到这里。这个程序获取code，然后向 GitHub 申请 access token。
+# url = "https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635"
+@app.route("/github-auth/", methods=["GET", "POST"])
+def github():
+    # 获取GitHub传输来的数据
+    code = request.args.get("code")
+    # installation_id = request.args.get("installation_id")
+    # setup_action = request.args.get("setup_action")
+    # 处理数据，获取access_token
+    access_token = user_access_token(code)
+    identity = hashlib.md5(code.encode('utf8')).hexdigest()
+    message = """
+    欢迎使用issues-anywhere机器人！ <br><br>
+    微信公众号途径：<br>
+    &ensp;&ensp;请关注公众号：Donald-Trump <br>
+    &ensp;&ensp;您在本站的ID为：{identity} <br>
+    &ensp;&ensp;请在公众号发送字符串以绑定身份(首尾无空格): <br>
+    &ensp;&ensp;2bb40dc6c:{identity}<br>
+    若失效，请点击：https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
+    """
+    return message.format(identity=identity)
 
 @app.route("/", methods=["GET", "POST"])
 def wechat():
@@ -160,18 +193,52 @@ def wechat():
                 #     }
                 # }
                 #
-                # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
-                filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
-                r = requests.get(xml_dict.get("PicUrl"))
-                with open(filename, 'wb') as f:
-                    f.write(r.content)
-                # 上传
-                picurl = upload_file(filename)
-                # 将图片链接改成markdown中的表达形式
-                body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
-                # 发布issue
-                title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-                message = create_github_issue(title,body)
+                async def async_handle():
+                    # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
+                    filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
+                    r = requests.get(xml_dict.get("PicUrl"))
+                    with open(filename, 'wb') as f:
+                        f.write(r.content)
+                    # 上传
+                    picurl = upload_file(filename)
+                    # 将图片链接改成markdown中的表达形式
+                    body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
+                    # 发布issue
+                    title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
+                    message = create_github_issue(title,body)
+
+                    access_token = get_access_token()
+                    print("access_token: ", access_token)
+
+                    add_kefu_url = 'https://api.weixin.qq.com/customservice/kfaccount/add'
+
+                    params = {
+                        "access_token": access_token,
+                        "json": {
+                            "kf_account" : "system2@system",
+                            "nickname" : "客服2",
+                            "password" : "admin2",
+                            }
+                    }
+                    r = requests.post(add_kefu_url, params=params)
+                    print(r.json())
+                    # $data = '{
+                    #     "kf_account" : "system@system",
+                    #     "nickname" : "客服1",
+                    #     "password" : "admin",
+                    # }';
+                    # json_data = {
+                    #     "touser":xml_dict.get("FromUserName"),
+                    #     "msgtype":"text",
+                    #     "text":
+                    #     {
+                    #         "content":"Hello World"
+                    #     }
+                    # }
+                    # json=json_data
+                    # requests.post()
+
+                asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
                 # 告知用户issue是否成功发布
                 resp_dict = {
                     "xml":{
@@ -179,7 +246,7 @@ def wechat():
                         "FromUserName":xml_dict.get("ToUserName"),
                         "CreateTime":int(time.time()),
                         "MsgType":"text",
-                        "Content":message
+                        "Content":"OK"
                     }
                 }
 

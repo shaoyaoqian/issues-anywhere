@@ -36,6 +36,9 @@ WECHAT_TOKEN = 'look_back_at_me'
 WECHAT_APPID = "wxcc6a1b8adade3237",         
 WECHAT_SECRET = "29b97cdfd439873420ecf78e8221fdea"
 
+# WECHAT_COMMAND
+WECHAT_REGISTER = "n92k"
+
 # 创建一个 Flask 应用
 app = Flask(__name__)
 
@@ -177,7 +180,17 @@ def wechat_message_text(xml_dict):
     # 发布GitHub issue
     title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
     body = xml_dict.get("Content")
-    message = create_github_issue(title,body)
+    
+    if WECHAT_REGISTER == body[0:4] and len(body) == 16:
+        # 绑定微信ID和GitHub Identity
+        identity = body[4:16]
+        wechat_id = xml_dict.get("FromUserName")
+        # 查找数据库中的 wechat_id, 如果有，删去那条数据。
+        # 查找数据库中的 identity, 更新其 wechat_id 条目。
+        # 提交数据库。
+        message = "成功绑定GitHub账号和微信账号"+body[4:16]
+    else :
+        message = create_github_issue(title,body)
 
     # 返回消息告知用户issue是否成功发布
     resp_dict = {

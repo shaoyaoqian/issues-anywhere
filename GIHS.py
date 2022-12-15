@@ -6,15 +6,15 @@ from loguru import logger
 
 # 把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
 GIHS_OWNER          = "shaoyaoqian"
-GIHS_REPO           = "alice-player"
+GIHS_REPO           = "images-1"
 GIHS_PATH           = "test"
 GIHS_url_stensil    = "https://api.github.com/repos/{owner}/{repo}/contents/{path}/{filename}"
 GIHS_cdn_stensil    = "https://cdn.jsdelivr.net/gh/{owner}/{repo}/{path}/{filename}"
 
 # GitHub issues 仓库
-GITHUB_TOKEN = "ghu_RjTyVDgluFzDUEP8NSA7rQnlQRns7k4fXpjV"
+GITHUB_TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
 GITHUB_OWNER = 'shaoyaoqian'
-GITHUB_REPO  = "alice-player"
+GITHUB_REPO  = "MerryJingle"
 
 # GitHub App
 APP_ID        = "272667"
@@ -72,7 +72,7 @@ def create_github_issue(title,body):
     logger.info("create_github_issue")
     token = GITHUB_TOKEN
     url_base = "https://api.github.com/repos/{OWNER}/{REPO}/issues"
-    url = url_base.format(OWNER=GIHS_OWNER, REPO=GIHS_REPO)
+    url = url_base.format(OWNER=GITHUB_OWNER, REPO=GITHUB_REPO)
     # headers = {"Authorization": "token " + token}
     headers = {"Authorization": "token " + token}
     # "Accept: application/vnd.github+json" \
@@ -84,6 +84,7 @@ def create_github_issue(title,body):
     }
     data = json.dumps(data)
     response = requests.post(url=url, data=data, headers=headers)
+    logger.info(response.json())
     message = "成功发布动态！\n日期：{}\n内容：{}\n".format(response.json()['title'],response.json()['body'])
     logger.info(message)
     return message
@@ -100,10 +101,11 @@ def user_access_token(code):
     headers = {
         'accept': 'application/json'
     }
-    response = requests.post(url_access_token,params=params, headers=headers, timeout=1)
+    response = requests.get(url_access_token,params=params, headers=headers, timeout=1)
     # {'access_token': 'ghu_1X6zMvZQQxXSDKWxamtQQQFrtBzoRG3Dtaez', 'expires_in': 28800, 
     # 'refresh_token': 'ghr_1PfEuwbCDqJ5uqzyIGQsj0Nma4erXj1UCM9kMPD94q4VTr1VIdSnWVAxpzUUGWuXXjzYzl4ZB5GU', 
     # 'refresh_token_expires_in': 15724800, 'token_type': 'bearer', 'scope': ''}
+    logger.info(response.json())
     return response.json()['access_token']
 
 

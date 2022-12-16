@@ -4,17 +4,18 @@ import json
 import hashlib
 from loguru import logger
 
-# 把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
-GIHS_OWNER          = "shaoyaoqian"
-GIHS_REPO           = "images-1"
-GIHS_PATH           = "test"
+
 GIHS_url_stensil    = "https://api.github.com/repos/{owner}/{repo}/contents/{path}/{filename}"
 GIHS_cdn_stensil    = "https://cdn.jsdelivr.net/gh/{owner}/{repo}/{path}/{filename}"
 
-# GitHub issues 仓库
-GITHUB_TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
-GITHUB_OWNER = 'shaoyaoqian'
-GITHUB_REPO  = "MerryJingle"
+class GITHUB:
+    # 把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
+    GIHS_REPO           = "images-1"
+    GIHS_PATH           = "test"
+    # GitHub issues 仓库
+    TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
+    OWNER = 'shaoyaoqian'
+    REPO  = "MerryJingle"
 
 # GitHub App
 APP_ID        = "272667"
@@ -23,7 +24,7 @@ client_secret = "c9a7b1d853d87a138923951ba47e3c8fadd2d26b"
 
 APP_RSA_FILE = "wechat-to-issues.2022-12-14.private-key.pem"
 
-def GIHS_upload_file(filename):
+def GIHS_upload_file(githubuser,filename):
     logger.info("GIHS_upload_file")
     # 读取文件
     def open_file(file_path):
@@ -45,8 +46,8 @@ def GIHS_upload_file(filename):
         hash = sha1obj.hexdigest()
         return hash
     file_data = open_file(filename)
-    token = GITHUB_TOKEN
-    url = GIHS_url_stensil.format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
+    token = githubuser.TOKEN
+    url = GIHS_url_stensil.format(owner=githubuser.OWNER, repo=githubuser.GIHS_REPO, path=githubuser.GIHS_PATH, filename=filename)
     headers = {"Authorization": "token " + token}
     content, sha = file_base64(file_data)
     data = {
@@ -66,13 +67,14 @@ def GIHS_upload_file(filename):
     print(re_data)
     print(re_data['content']['sha']) 
     # 在国内默认的down_url可能会无法访问，因此使用CDN访问
-    return GIHS_cdn_stensil .format(owner=GIHS_OWNER, repo=GIHS_REPO, path=GIHS_PATH, filename=filename)
+    return GIHS_cdn_stensil .format(owner=githubuser.OWNER, repo=githubuser.GIHS_REPO, path=githubuser.GIHS_PATH, filename=filename)
 
-def create_github_issue(title,body):
+
+def create_github_issue(githubuser,title,body):
     logger.info("create_github_issue")
-    token = GITHUB_TOKEN
+    token = githubuser.TOKEN
     url_base = "https://api.github.com/repos/{OWNER}/{REPO}/issues"
-    url = url_base.format(OWNER=GITHUB_OWNER, REPO=GITHUB_REPO)
+    url = url_base.format(OWNER=githubuser.OWNER, REPO=githubuser.REPO)
     # headers = {"Authorization": "token " + token}
     headers = {"Authorization": "token " + token}
     # "Accept: application/vnd.github+json" \
@@ -85,7 +87,10 @@ def create_github_issue(title,body):
     data = json.dumps(data)
     response = requests.post(url=url, data=data, headers=headers)
     logger.info(response.json())
-    message = "成功发布动态！\n日期：{}\n内容：{}\n".format(response.json()['title'],response.json()['body'])
+    message = "成功发布动态！\n仓库：{}\n日期：{}\n内容：{}\n".format(
+        '{}/{}'.format(githubuser.OWNER, githubuser.REPO),
+        response.json()['title'],
+        response.json()['body'])
     logger.info(message)
     return message
 
@@ -101,12 +106,31 @@ def user_access_token(code):
     headers = {
         'accept': 'application/json'
     }
-    response = requests.get(url_access_token,params=params, headers=headers, timeout=1)
+    response = requests.post(url_access_token,params=params, headers=headers, timeout=1)
     # {'access_token': 'ghu_1X6zMvZQQxXSDKWxamtQQQFrtBzoRG3Dtaez', 'expires_in': 28800, 
     # 'refresh_token': 'ghr_1PfEuwbCDqJ5uqzyIGQsj0Nma4erXj1UCM9kMPD94q4VTr1VIdSnWVAxpzUUGWuXXjzYzl4ZB5GU', 
     # 'refresh_token_expires_in': 15724800, 'token_type': 'bearer', 'scope': ''}
     logger.info(response.json())
     return response.json()['access_token']
+
+
+# curl \
+#   -H "Accept: application/vnd.github+json" \
+#   -H "Authorization: Bearer ghu_cVGyipIxuAVnVXa2nA1Gq5gAbyeBXF0KIZQw"\
+#   -H "X-GitHub-Api-Version: 2022-11-28" \
+#   https://api.github.com/user
+def user_id(githubuser):
+    logger.info("user_id")
+    url_user = "https://api.github.com/user"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": "Bearer " + githubuser.TOKEN,
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    response = requests.get(url_user,headers=headers)
+    logger.info(response.url)
+    logger.info(response.json())
+    return response.json()['id']
 
 
 def installation_access_token(installation_id):

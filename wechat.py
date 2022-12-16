@@ -11,13 +11,14 @@ import time, datetime
 import json
 import requests
 import jwt
-from urllib.parse import parse_qs
 from loguru import logger 
 
 # GITHUB 模块
-from GIHS import create_github_issue, user_access_token
+from GIHS import create_github_issue, user_access_token, GITHUB, user_id
 from GIHS import GIHS_upload_file as upload_file
 # from QIHS import upload_file
+
+githubuser = GITHUB()
 
 # 异步任务池
 import asyncio, time, threading
@@ -52,18 +53,22 @@ def github():
     # setup_action = request.args.get("setup_action")
     # 处理数据，获取access_token
     access_token = user_access_token(code)
-    identity = hashlib.md5(code.encode('utf8')).hexdigest()
+    temp_githubuser = GITHUB()
+    temp_githubuser.TOKEN = access_token
+    identity = user_id(temp_githubuser)
+    # TODO insert a github user
+    # database.update(temp_githubuser)
     message = """
     欢迎使用issues-anywhere机器人！ <br><br>
     微信公众号途径：<br>
     &ensp;&ensp;请关注公众号：Donald-Trump <br>
-    &ensp;&ensp;您在本站的ID为：{identity} <br>
+    &ensp;&ensp;您在GitHubID为：{identity} <br>
     &ensp;&ensp;请在公众号发送字符串以绑定身份(首尾无空格): <br>
-    &ensp;&ensp;2bb40dc6c:{identity}<br>
-    若失效，请点击：https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
+    &ensp;&ensp;n92k{identity}<br>
+    若失效，请点击链接重新登陆：https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
     """
     print(access_token)
-    return message.format(identity=identity[0:4])
+    return message.format(identity=identity)
 
 @app.route("/", methods=["GET", "POST"])
 def wechat():
@@ -101,28 +106,29 @@ def wechat():
         # 代表请求不是来自微信
         # 弹出报错信息, 身份有问题
         abort(403)
-    else:
-        # 表示是微信发送的请求,第一次接入微信服务器的验证时才会使用
-        if request.method == "GET":
-            echostr = request.args.get("echostr")
-            # 校验echostr
-            if not echostr:
-                abort(400)
-            return echostr
+    
+    # 表示是微信发送的请求,第一次接入微信服务器的验证时才会使用
+    if request.method == "GET":
+        echostr = request.args.get("echostr")
+        # 校验echostr
+        if not echostr:
+            abort(400)
+        return echostr
 
-        elif request.method == "POST":
-            # 表示微信服务器转发消息过来
-            # 拿取xml的请求数据
-            xml_str = request.data
+    if request.method == "POST":
+        # 表示微信服务器转发消息过来
+        # 拿取xml的请求数据
+        xml_str = request.data
 
-            # 当xml_str为空时
-            if not xml_str:
-                abort(400)
+        # 当xml_str为空时
+        if not xml_str:
+            abort(400)
 
-            # 将xml字符串解析成字典
-            xml_dict = xmltodict.parse(xml_str)
-            xml_dict = xml_dict.get("xml")
-            return wechat_message(xml_dict)
+        # 将xml字符串解析成字典
+        xml_dict = xmltodict.parse(xml_str)
+        xml_dict = xml_dict.get("xml")
+        logger.info(xml_dict.get("FromUserName"))
+        return wechat_message(xml_dict)
 
 def wechat_message_image(xml_dict):
     # PicUrl  图片链接
@@ -147,11 +153,14 @@ def wechat_message_image(xml_dict):
         with open(filename, 'wb') as f:
             f.write(r.content)
         # 上传
-        picurl = upload_file(filename)
+        picurl = upload_file(githubuser,filename)
         # 将图片链接改成markdown中的表达形式
         body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
         # 发布issue
         title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
+        message = create_github_issue(githubuser,title,body)
+        logger.info(message)
+
 
     asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
     # 告知用户issue是否成功发布
@@ -190,7 +199,7 @@ def wechat_message_text(xml_dict):
         # 提交数据库。
         message = "成功绑定GitHub账号和微信账号"+body[4:16]
     else :
-        message = create_github_issue(title,body)
+        message = create_github_issue(githubuser,title,body)
 
     # 返回消息告知用户issue是否成功发布
     resp_dict = {
@@ -217,11 +226,11 @@ def wechat_message_video(xml_dict):
     with open(filename, 'wb') as f:
         f.write(r.content)
     
-    video_url = upload_file(filename)
+    video_url = upload_file(githubuser,filename)
     body = "<video src={} width=200 controls></video>".format(video_url)
     # 发布issue
     title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-    message = create_github_issue(title,body)
+    message = create_github_issue(githubuser,title,body)
     # 告知用户issue是否成功发布
     resp_dict = {
         "xml":{

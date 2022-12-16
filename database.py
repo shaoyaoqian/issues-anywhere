@@ -13,13 +13,14 @@ def create_database(connection):
     CREATE_TABLE = '''
     CREATE TABLE IF NOT EXISTS
         user1 (
-        identity        TEXT,
+        identity        int,
         access_token    TEXT,
         refresh_token   TEXT,
         installation_id TEXT,
         wechat_id       TEXT,
         username        TEXT,
-        repository      TEXT
+        repository      TEXT,
+        image_repository TEXT
     )
     '''
     connection.execute(CREATE_TABLE)

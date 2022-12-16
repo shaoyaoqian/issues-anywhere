@@ -10,20 +10,20 @@ GIHS_cdn_stensil    = "https://cdn.jsdelivr.net/gh/{owner}/{repo}/{path}/{filena
 
 class GITHUB:
     # 把GitHub图床翻译成 GitHub Image Hosting Service, 然后取他的简写为GIHS。
-    GIHS_REPO           = "images-1"
-    GIHS_PATH           = "test"
+    GIHS_REPO           = "im1"
+    GIHS_PATH           = "tt"
     # GitHub issues 仓库
     # TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
-    TOKEN = "ghu_vgrYndRjJ5CeaoJRmsIucpE32RggHV0GmxyQ"
-    OWNER = 'shaoyaoqian'
-    REPO  = "MerryJingle"
+    TOKEN = "ghu_vgmxyQ"
+    OWNER = 'shan'
+    REPO  = "Mergle"
 
 # GitHub App
-APP_ID        = "272667"
-client_id     = "Iv1.d5df482df1cd3635"
-client_secret = "c9a7b1d853d87a138923951ba47e3c8fadd2d26b"
+APP_ID        = "2767"
+client_id     = "I635"
+client_secret = "c9d2d26b"
 
-APP_RSA_FILE = "wechat-to-issues.2022-12-14.private-key.pem"
+APP_RSA_FILE = "wechy.pem"
 
 def GIHS_upload_file(githubuser,filename):
     logger.info("GIHS_upload_file")

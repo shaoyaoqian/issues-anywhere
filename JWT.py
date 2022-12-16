@@ -2,7 +2,7 @@
 import time
 import jwt  #需要安装pip install pyjwt
 
-key = open("wechat-to-issues.2022-12-14.private-key.pem",'r').read()
+key = open("we.pem",'r').read()
 print(key)
 
 def generate_token():

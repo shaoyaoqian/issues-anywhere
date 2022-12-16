@@ -19,7 +19,13 @@ https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
 
 5. 看效果
 https://blog.pengfeima.cn/about/
-<img width="485" alt="image" src="https://user-images.githubusercontent.com/115222128/208011075-e764fc2b-5d23-49ef-b59a-0da0edc1369c.png">
+
+
+<img width="489" alt="image" src="https://user-images.githubusercontent.com/115222128/208011770-6c99a7e6-bbea-4a01-b126-ffdaa0d2e2ed.png">
+
+<img width="345" alt="image" src="https://user-images.githubusercontent.com/115222128/208011866-97d6271c-daff-4434-8fd8-a453e214d52a.png">
+
+6. 其实很多部分还没写完，我恨，我没有那么多时间～
 
 
 

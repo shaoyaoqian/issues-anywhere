@@ -19,14 +19,9 @@ https://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635
 
 5. 看效果
 https://blog.pengfeima.cn/about/
+<img width="485" alt="image" src="https://user-images.githubusercontent.com/115222128/208011075-e764fc2b-5d23-49ef-b59a-0da0edc1369c.png">
 
 
 
-这个程序写了整整三天了，不抱歉
-前阵子
-前阵子写好
-前阵子写好的
-前阵子写好的那部分
-前阵子写好的那部分唉
-前阵子写好的那部分唉～
+这个程序写了整整三天了，还不包括前阵子写好的那部分，唉～
 

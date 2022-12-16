@@ -17,7 +17,7 @@ from loguru import logger
 from GIHS import create_github_issue, user_access_token, GITHUB, user_id
 from GIHS import GIHS_upload_file as upload_file
 
-githubuser = GITHUB()
+# githubuser = GITHUB()
 
 # 异步任务池
 import asyncio, time, threading
@@ -33,6 +33,8 @@ WECHAT_TOKEN = 'look_back_at_me'
 WECHAT_APPID = "wxcc6a1b8adade3237",         
 WECHAT_SECRET = "29b97cdfd439873420ecf78e8221fdea"
 WECHAT_REGISTER = "n92k"
+WECHAR_REPO_1   = "di3a"
+WECHAR_REPO_2   = "aap2"
 
 # 创建一个 Flask 应用
 app = Flask(__name__)
@@ -48,7 +50,7 @@ def github():
     # database.update(temp_githubuser)
     message = """
     欢迎使用issues-anywhere机器人！ <br><br>
-    微信公众号途径：<br>
+    微信公众号途径发布issue：<br>
     &ensp;&ensp;请关注公众号：Donald-Trump <br>
     &ensp;&ensp;您在GitHubID为：{identity} <br>
     &ensp;&ensp;请在公众号发送字符串以绑定身份(首尾无空格): <br>
@@ -94,26 +96,53 @@ def wechat():
         # 将xml字符串解析成字典
         xml_dict = xmltodict.parse(xml_str)
         xml_dict = xml_dict.get("xml")
-        logger.info(xml_dict.get("FromUserName"))
-        return wechat_message(xml_dict)
+        wechatid = xml_dict.get("FromUserName")
+        # TODO : 在数据库中根据wechatid查找用户
+        # temp_githubuser = database.select_wechatid()
+        temp_githubuser = None
+        temp_githubuser = GITHUB()
+        if temp_githubuser == None:
+            resp_dict = {
+                "xml": {
+                    "ToUserName": xml_dict.get("FromUserName"),
+                    "FromUserName": xml_dict.get("ToUserName"),
+                    "CreateTime": int(time.time()),
+                    "MsgType": "text",
+                    "Content": "您未绑定GitHub账号，请登陆：\nhttps://github.com/login/oauth/authorize?client_id=Iv1.d5df482df1cd3635"
+                }
+            }
+        else:
+            resp_dict = wechat_message(temp_githubuser, xml_dict)
+        if resp_dict == None:
+            resp_dict = {
+                "xml": {
+                    "ToUserName": xml_dict.get("FromUserName"),
+                    "FromUserName": xml_dict.get("ToUserName"),
+                    "CreateTime": int(time.time()),
+                    "MsgType": "text",
+                    "Content": "不能处理消息类型：" + msg_type
+                }
+            }
+        resp_xml = xmltodict.unparse(resp_dict)
+        return resp_xml
 
-def wechat_message_image(xml_dict):
-    async def async_handle():
-        # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
-        filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
-        r = requests.get(xml_dict.get("PicUrl"))
-        with open(filename, 'wb') as f:
-            f.write(r.content)
-        # 上传
-        picurl = upload_file(githubuser,filename)
-        # 将图片链接改成markdown中的表达形式
-        body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
-        # 发布issue
-        title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
-        message = create_github_issue(githubuser,title,body)
-        logger.info(message)
+def wechat_message_image(githubuser, xml_dict):
+    # async def async_handle():
+    # 下载图片，以时间命名，为了确保图片文件名的唯一性，时间精确到纳秒(10^-6秒)，例如：2022-12-03-165018047661.png
+    filename = datetime.datetime.now().strftime("%Y-%m-%d-%H%M%S%f")+".png"
+    r = requests.get(xml_dict.get("PicUrl"))
+    with open(filename, 'wb') as f:
+        f.write(r.content)
+    # 上传
+    picurl = upload_file(githubuser,filename)
+    # 将图片链接改成markdown中的表达形式
+    body = "<img width=200 src=\"{}\" alt=\"{}\" />".format(picurl,filename)
+    # 发布issue
+    title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
+    message = create_github_issue(githubuser,title,body)
+    logger.info(message)
 
-    asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
+    # asyncio.run_coroutine_threadsafe(async_handle(),thread_loop)
     # 告知用户issue是否成功发布
     resp_dict = {
         "xml":{
@@ -121,27 +150,36 @@ def wechat_message_image(xml_dict):
             "FromUserName":xml_dict.get("ToUserName"),
             "CreateTime":int(time.time()),
             "MsgType":"text",
-            "Content":"OK"
+            "Content": message
         }
     }
     return resp_dict
 
-def wechat_message_text(xml_dict):
+def wechat_message_text(githubuser, xml_dict):
     # 发布GitHub issue
     title = time.strftime('%Y年%m月%d日 %H:%M:%S',time.localtime(time.time()))
     body = xml_dict.get("Content")
     
-    if WECHAT_REGISTER == body[0:4] and len(body) == 16:
+    if WECHAT_REGISTER == body[0:4] and len(body) == 13:
+        # TODO : 绑定GitHub账户和微信账户
         # 绑定微信ID和GitHub Identity
-        identity = body[4:16]
+        identity = body[4:13]
         wechat_id = xml_dict.get("FromUserName")
-        # 查找数据库中的 wechat_id, 如果有，删去那条数据。
-        # 查找数据库中的 identity, 更新其 wechat_id 条目。
-        # 提交数据库。
-        message = "成功绑定GitHub账号和微信账号"+body[4:16]
+        # temp_githubuser = database.select_identity()
+        # if temp_githubuser == None
+        #    temp_githubuser = GITHUB()
+        #    temp_githubuser.wechat_id = wechat_id
+        #    将此微信账号绑定一个公共的GitHub账户
+        # else : 
+        #    temp_githubuser.wechat_id = wechat_id
+        #    将此微信账号绑定私有的GitHub账户
+        # database.update(temp_githubuser)
+        message = "成功绑定GitHub账号和微信账号。\n您的GitHub id 为："+body[4:16]
     else :
         message = create_github_issue(githubuser,title,body)
 
+    # message = "查了下数据库，您的GitHub ID为115222128，\nGitHub用户名为shaoyaoqian，\n您将在仓库shaoyaoqian/MerryJingle中发issue。(app需要有仓库的权限)"
+    # message = "查了下数据库，您的GitHub ID为115222128，\nGitHub用户名为shaoyaoqian，\n您发的文件将存储在仓库shaoyaoqian/images-1中，并以Markdown格式的文本发布在shaoyaoqian/MerryJingle的issues中。(app需要有仓库的权限)"
     # 返回消息告知用户issue是否成功发布
     resp_dict = {
         "xml":{
@@ -154,7 +192,7 @@ def wechat_message_text(xml_dict):
     }
     return resp_dict
 
-def wechat_message_video(xml_dict):
+def wechat_message_video(githubuser, xml_dict):
     access_token = wechat_access_token()
     # 下载视频文件
     baseurl = "https://api.weixin.qq.com/cgi-bin/media/get?"
@@ -184,35 +222,21 @@ def wechat_message_video(xml_dict):
     }
     return resp_dict
 
-def wechat_message(xml_dict):
+def wechat_message(githubuser, xml_dict):
     # MsgType是消息类型 这里提取消息类型
     msg_type = xml_dict.get("MsgType")
+    resp_dict = None
 
     if msg_type == "text":
-        resp_dict = wechat_message_text(xml_dict)
+        resp_dict = wechat_message_text(githubuser, xml_dict)
 
     elif msg_type == "image":
-        resp_dict = wechat_message_image(xml_dict)
+        resp_dict = wechat_message_image(githubuser, xml_dict)
 
     elif msg_type == "video":
-        resp_dict = wechat_message_video(xml_dict)
+        resp_dict = wechat_message_video(githubuser, xml_dict)
     
-    else:
-        resp_dict = {
-            "xml": {
-                "ToUserName": xml_dict.get("FromUserName"),
-                "FromUserName": xml_dict.get("ToUserName"),
-                "CreateTime": int(time.time()),
-                "MsgType": "text",
-                "Content": "不能处理消息类型：" + msg_type
-            }
-        }
-    # 将字典转换为xml字符串
-    resp_xml_str = xmltodict.unparse(resp_dict)
-    logger.info(resp_dict)
-    logger.info(resp_xml_str)
-    # 返回消息数据给微信服务器
-    return resp_xml_str
+    return resp_dict
 
 def wechat_access_token():
     # 获取微信的access token，在获取音频和视频文件时用得到

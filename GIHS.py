@@ -13,7 +13,8 @@ class GITHUB:
     GIHS_REPO           = "images-1"
     GIHS_PATH           = "test"
     # GitHub issues 仓库
-    TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
+    # TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
+    TOKEN = "ghu_vgrYndRjJ5CeaoJRmsIucpE32RggHV0GmxyQ"
     OWNER = 'shaoyaoqian'
     REPO  = "MerryJingle"
 
@@ -26,19 +27,15 @@ APP_RSA_FILE = "wechat-to-issues.2022-12-14.private-key.pem"
 
 def GIHS_upload_file(githubuser,filename):
     logger.info("GIHS_upload_file")
-    # 读取文件
     def open_file(file_path):
         with open(file_path, 'rb') as f:
             return f.read()
-    # 将文件转换为base64编码，上传文件必须将文件以base64格式上传
     def file_base64(data):
         sha = CalcSha1(data)
         print(sha)
         data_b64 = base64.b64encode(data).decode('utf-8')
         return data_b64, sha
     def CalcSha1(data):
-        # 哈希值的计算：https://stackoverflow.com/questions/7225313/how-does-git-compute-file-hashes/7225329#7225329
-        # 需要在原数据前加上 "blob {字节长度}\0"
         sha1obj = hashlib.sha1()
         head = 'blob {}\0'.format(len(data))
         sha1obj.update(head.encode('utf-8'))
@@ -46,9 +43,8 @@ def GIHS_upload_file(githubuser,filename):
         hash = sha1obj.hexdigest()
         return hash
     file_data = open_file(filename)
-    token = githubuser.TOKEN
     url = GIHS_url_stensil.format(owner=githubuser.OWNER, repo=githubuser.GIHS_REPO, path=githubuser.GIHS_PATH, filename=filename)
-    headers = {"Authorization": "token " + token}
+    headers = {"Authorization": "token " + githubuser.TOKEN}
     content, sha = file_base64(file_data)
     data = {
         "message": "Add a new file.",
@@ -59,8 +55,8 @@ def GIHS_upload_file(githubuser,filename):
         "sha":sha,
         "content": content
     }
-    data = json.dumps(data)
-    response = requests.put(url=url, data=data, headers=headers)
+    response = requests.put(url=url, data=json.dumps(data), headers=headers)
+    logger.info(response.json())
     response.encoding = "utf-8"
     re_data = json.loads(response.text)
     # 能返回文件sha值表示上传成功
@@ -72,20 +68,14 @@ def GIHS_upload_file(githubuser,filename):
 
 def create_github_issue(githubuser,title,body):
     logger.info("create_github_issue")
-    token = githubuser.TOKEN
     url_base = "https://api.github.com/repos/{OWNER}/{REPO}/issues"
     url = url_base.format(OWNER=githubuser.OWNER, REPO=githubuser.REPO)
-    # headers = {"Authorization": "token " + token}
-    headers = {"Authorization": "token " + token}
-    # "Accept: application/vnd.github+json" \
-    # "Authorization: Bearer <YOUR-TOKEN>"\
-    # "X-GitHub-Api-Version: 2022-11-28" \
+    headers = {"Authorization": "Bearer " + githubuser.TOKEN}
     data = {
         "title": title,
         "body": body,
     }
-    data = json.dumps(data)
-    response = requests.post(url=url, data=data, headers=headers)
+    response = requests.post(url=url, data=json.dumps(data), headers=headers)
     logger.info(response.json())
     message = "成功发布动态！\n仓库：{}\n日期：{}\n内容：{}\n".format(
         '{}/{}'.format(githubuser.OWNER, githubuser.REPO),
@@ -97,28 +87,18 @@ def create_github_issue(githubuser,title,body):
 
 def user_access_token(code):
     logger.info("user_access_token")
-    url_access_token = "https://github.com/login/oauth/access_token"
+    url = "https://github.com/login/oauth/access_token"
     params = {
         "client_id": client_id,
         "client_secret": client_secret,
         "code": code
     }
-    headers = {
-        'accept': 'application/json'
-    }
-    response = requests.post(url_access_token,params=params, headers=headers, timeout=1)
-    # {'access_token': 'ghu_1X6zMvZQQxXSDKWxamtQQQFrtBzoRG3Dtaez', 'expires_in': 28800, 
-    # 'refresh_token': 'ghr_1PfEuwbCDqJ5uqzyIGQsj0Nma4erXj1UCM9kMPD94q4VTr1VIdSnWVAxpzUUGWuXXjzYzl4ZB5GU', 
-    # 'refresh_token_expires_in': 15724800, 'token_type': 'bearer', 'scope': ''}
+    headers = { 'accept': 'application/json' }
+    response = requests.post(url,params=params, headers=headers, timeout=1)
     logger.info(response.json())
     return response.json()['access_token']
 
 
-# curl \
-#   -H "Accept: application/vnd.github+json" \
-#   -H "Authorization: Bearer ghu_cVGyipIxuAVnVXa2nA1Gq5gAbyeBXF0KIZQw"\
-#   -H "X-GitHub-Api-Version: 2022-11-28" \
-#   https://api.github.com/user
 def user_id(githubuser):
     logger.info("user_id")
     url_user = "https://api.github.com/user"
@@ -153,7 +133,3 @@ def installation_access_token(installation_id):
     response = requests.post(url_access_token.format(installation_id=installation_id), headers=headers)
     print(response.json())
     return response
-
-if __name__ == '__main__':
-    filename = "a.jpeg"
-    upload_file(filename)

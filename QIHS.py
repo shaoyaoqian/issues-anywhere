@@ -1,9 +1,9 @@
 from qiniu import Auth, put_file, etag
 import qiniu.config
 # 七牛
-QINIU_ACCESS_KEY = "NLI1UowRkIZiebmdEZ7MWNDLtPYeqJWkc90MFn_0"
-QINIU_SECRET_KEY = "NMgdo5YrD8zQhzc8ZGWH4t-pcGEeLOYzFYJZhiG-"
-QINIU_CDN_BASE   = "https://china-qiniu-s3.pengfeima.cn/"
+QINIU_ACCESS_KEY = "NLI1qJWkc90MFn_0"
+QINIU_SECRET_KEY = "No5YrD8zQhzc8ZGWH4t-pcGEeLOYzFYJZhiG-"
+QINIU_CDN_BASE   = "https://china-qiniu-s3.pema.cn/"
 QINIU_BUCKET     = 'pengfei-npu'
 
 # 上传到七牛云图床，参考：https://developer.qiniu.com/kodo/1242/python

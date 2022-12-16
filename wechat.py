@@ -33,9 +33,9 @@ thread_loop = asyncio.new_event_loop()
 threading.Thread(target=start_loop,args=(thread_loop,)).start()
 
 # 微信的token令牌，参数的获取可参考：https://qiniu.pengfeima.cn/typora/202212031457547.png
-WECHAT_TOKEN = 'look_back_at_me'
-WECHAT_APPID = "wxcc6a1b8adade3237",         
-WECHAT_SECRET = "29b97cdfd439873420ecf78e8221fdea"
+WECHAT_TOKEN = 'loome'
+WECHAT_APPID = "wxcc6a13237",         
+WECHAT_SECRET = "29b97cdf8221fdea"
 
 # WECHAT_COMMAND
 WECHAT_REGISTER = "n92k"

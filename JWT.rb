@@ -2,7 +2,7 @@ require 'openssl'
 require 'jwt'  # https://rubygems.org/gems/jwt
 
 # Private key contents
-private_pem = File.read("wechat-to-issues.2022-12-14.private-key.pem")
+private_pem = File.read("wec-14.private-key.pem")
 private_key = OpenSSL::PKey::RSA.new(private_pem)
 
 puts Time.now.to_i

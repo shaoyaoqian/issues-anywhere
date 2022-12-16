@@ -13,16 +13,16 @@ class GITHUB:
     GIHS_REPO           = "images-1"
     GIHS_PATH           = "test"
     # GitHub issues 仓库
-    TOKEN = "ghu_XuUkXX4btBCFi48Nt4I3GuwaSnvqV70uYr2o"
-    OWNER = 'shaoyaoqian'
-    REPO  = "MerryJingle"
+    TOKEN = "ghu_XuU3GuwaSnvqV70uYr2o"
+    OWNER = 'shaoian'
+    REPO  = "Mergle"
 
 # GitHub App
-APP_ID        = "272667"
-client_id     = "Iv1.d5df482df1cd3635"
-client_secret = "c9a7b1d853d87a138923951ba47e3c8fadd2d26b"
+APP_ID        = "2727"
+client_id     = "Iv2df1cd3635"
+client_secret = "c9a7b26b"
 
-APP_RSA_FILE = "wechat-to-issues.2022-12-14.private-key.pem"
+APP_RSA_FILE = "wech"
 
 def GIHS_upload_file(githubuser,filename):
     logger.info("GIHS_upload_file")

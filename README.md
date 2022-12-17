@@ -1,6 +1,28 @@
 # issues-anywhere
 
-利用手机微信随时随地发布碎片化思想
+因为功能相似，文档格式参考[BBTALK](https://bb.js.org/quick-start.html)
+
+### 前言
+什么是[啥名字]？
+[啥名字]利用手机微信发布碎片化思想同步至博客，基于GitHub Issues，无需任何后端服务。
+
+### 特性
+支持微信端文字及图片消息发送
+当前为初步版本，后续功能请见开发计划
+
+### 原理
+<img width="768" alt="image" src="https://user-images.githubusercontent.com/115222128/208239045-d8d9e4c8-0507-4701-8e6d-f4a696df3bb6.png">
+详细内容参见我博客和：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
+
+### 快速使用
+> 目前仅支持在 Hexo Stellar 主题使用
+使用timeline插件即可
+```
+{% timeline limit:5 user:shaoyaoqian api:https://api.github.com/repos/shaoyaoqian/MerryJingle/issues %}
+{% endtimeline %}
+```
+
+
 
 📲随时发送
 拿出手机即可发送碎片化思想，并同步博客显示。
@@ -14,9 +36,14 @@
 🤖无需后台
 有一个微信账号和一个GitHub账号即可使用功能。
 
-<img width="768" alt="image" src="https://user-images.githubusercontent.com/115222128/208239045-d8d9e4c8-0507-4701-8e6d-f4a696df3bb6.png">
 
-具体描述参见：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
+支持微信端文字及图片消息发送
+当前为初步版本，后续功能请见开发计划
+
+
+
+
+
 
 
                 # 流程：

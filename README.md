@@ -5,6 +5,13 @@
 
 具体描述参见：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
 
+
+                # 流程：
+                # 登陆GitHub，提供 GitHub identity、username、access token
+                # 绑定微信，提供 wechat id
+                # 设置 issue_repository
+                # 设置 data_repository
+                
 使用方法：
 
 1. 点击下面这个链接，登陆你的GitHub账号，必须登陆使用，我必须以某个身份发issue。（其实匿名也可以，用我的身份发issue，可以吗？）

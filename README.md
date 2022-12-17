@@ -1,4 +1,8 @@
 # issues-anywhere
+
+
+<img width="768" alt="image" src="https://user-images.githubusercontent.com/115222128/208239045-d8d9e4c8-0507-4701-8e6d-f4a696df3bb6.png">
+
 具体描述参见：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
 
 使用方法：

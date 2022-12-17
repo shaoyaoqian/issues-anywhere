@@ -1,10 +1,8 @@
 # issues-anywhere
 
-因为功能相似，文档格式参考[BBTALK](https://bb.js.org/quick-start.html)
-
 ### 前言
-什么是[啥名字]？
-[啥名字]利用手机微信发布碎片化思想同步至博客，基于GitHub Issues，无需任何后端服务。
+什么是IA(Issues Anywhere) Talk ？
+IA talk利用手机微信发布碎片化思想同步至博客，基于GitHub Issues，无需任何后端服务。
 
 ### 特性
 支持微信端文字及图片消息发送
@@ -12,17 +10,38 @@
 
 ### 原理
 <img width="768" alt="image" src="https://user-images.githubusercontent.com/115222128/208239045-d8d9e4c8-0507-4701-8e6d-f4a696df3bb6.png">
-详细内容参见我博客和：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
+详细内容参见我博客https://blog.pengfeima.cn/posts/14811/
+以及讨论：https://github.com/xaoxuu/hexo-theme-stellar/issues/199
 
-### 快速使用
-> 目前仅支持在 Hexo Stellar 主题使用
-使用timeline插件即可
+### 支持
+目前仅支持在 Hexo Stellar 主题使用，通过timeline插件插入文档。
 ```
-{% timeline limit:5 user:shaoyaoqian api:https://api.github.com/repos/shaoyaoqian/MerryJingle/issues %}
+{% timeline user:[用户名] api:https://api.github.com/repos/[用户名]/[仓库名]/issues %}
+{% endtimeline %}
+```
+效果如下：
+
+![](https://user-images.githubusercontent.com/115222128/208243727-a5ba4f6f-703c-41d0-a843-021a137fcdd2.png)
+
+### 快速开始
+#### 安装GitHub App
+新建一个GitHub仓库，安装应用[wechat-to-issues](https://github.com/apps/wechat-to-issues)，只授权你刚创建的仓库。
+![](https://user-images.githubusercontent.com/115222128/208220300-d7cf13ef-aa09-41e6-8adf-25fdde17ec1b.png)
+#### 关注公众号
+
+#### 绑定仓库
+然后再向公众号发送 di3a仓库名，前缀di3a是指令名。举个例子，我的仓库是blog，我就发送di3ablog，首尾不能有空格。
+
+### 在博客正文中插入
+```
+{% timeline user:[用户名] api:https://api.github.com/repos/[用户名]/[仓库名]/issues %}
 {% endtimeline %}
 ```
 
 
+
+
+文档撰写参考了[BBTALK](https://bb.js.org/quick-start.html)，下面这些是草稿，先不要看。
 
 📲随时发送
 拿出手机即可发送碎片化思想，并同步博客显示。

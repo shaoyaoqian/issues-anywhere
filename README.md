@@ -1,5 +1,16 @@
 # issues-anywhere
 
+📲随时发送
+拿出手机即可发送碎片化思想，并同步博客显示。
+
+🤞使用方便
+简略的 html 片段即可实现，且理论上支持任何框架或单独页面。
+
+🎁操作简单
+微信端直接发送文字、图片、视频。
+
+🤖无需后台
+有一个微信账号和一个GitHub账号即可使用功能。
 
 <img width="768" alt="image" src="https://user-images.githubusercontent.com/115222128/208239045-d8d9e4c8-0507-4701-8e6d-f4a696df3bb6.png">
 
